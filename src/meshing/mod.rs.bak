@@ -1,0 +1,113 @@
+// src/meshing/mod.rs
+
+//! Handles geometry processing and mesh generation by interfacing with Gmsh.
+
+use crate::{GeometryDefinition, Mesh, EngineError, GeometricPrimitive};
+use gmsh_sys as gmsh;
+use std::ffi::CString;
+use std::os::raw::{c_char, c_int};
+use std::ptr;
+use std::fs;
+
+/// Generates a mesh from a given geometry definition using the gmsh-sys crate.
+pub fn generate_mesh_from_geo(geo_def: &GeometryDefinition) -> Result<Mesh, EngineError> {
+    let mut ierr: c_int = 0;
+    unsafe {
+        gmsh::gmshInitialize(0, ptr::null_mut(), 1, &mut ierr);
+        if ierr != 0 {
+            return Err(EngineError::from(ierr));
+        }
+
+        match geo_def {
+            GeometryDefinition::File(path) => {
+                let c_path = CString::new(path.as_str()).map_err(|e| EngineError::MeshingFailed(e.to_string()))?;
+                gmsh::gmshOpen(c_path.as_ptr(), &mut ierr);
+                if ierr != 0 {
+                    return Err(EngineError::from(ierr));
+                }
+            }
+            GeometryDefinition::Primitive(primitive) => {
+                create_primitive_geometry(primitive)?;
+            }
+        }
+
+        gmsh::gmshModelOccSynchronize(&mut ierr);
+        if ierr != 0 {
+            return Err(EngineError::from(ierr));
+        }
+
+        gmsh::gmshModelMeshGenerate(3, &mut ierr);
+        if ierr != 0 {
+            return Err(EngineError::from(ierr));
+        }
+
+        let temp_file = "temp.msh";
+        let c_temp_file = CString::new(temp_file).unwrap();
+        gmsh::gmshWrite(c_temp_file.as_ptr(), &mut ierr);
+        if ierr != 0 {
+            return Err(EngineError::from(ierr));
+        }
+
+        let mesh = extract_mesh_data_from_file(temp_file)?;
+
+        gmsh::gmshFinalize(&mut ierr);
+        if ierr != 0 {
+            // Finalization error is not critical for returning the mesh
+            println!("Gmsh finalization failed with error code: {}", ierr);
+        }
+
+        Ok(mesh)
+    }
+}
+
+/// Creates geometry for a primitive shape using the gmsh-sys API.
+fn create_primitive_geometry(primitive: &GeometricPrimitive) -> Result<(), EngineError> {
+    let mut ierr: c_int = 0;
+    unsafe {
+        match primitive.shape.as_str() {
+            "cube" => {
+                if primitive.dimensions.len() != 3 {
+                    return Err(EngineError::MeshingFailed("Cube requires 3 dimensions [lx, ly, lz]".to_string()));
+                }
+                let (lx, ly, lz) = (primitive.dimensions[0], primitive.dimensions[1], primitive.dimensions[2]);
+                gmsh::gmshModelOccAddBox(0.0, 0.0, 0.0, lx, ly, lz, 0, &mut ierr);
+                if ierr != 0 {
+                    return Err(EngineError::from(ierr));
+                }
+            }
+            _ => {
+                return Err(EngineError::MeshingFailed(format!("Unsupported primitive shape: {}", primitive.shape)));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Extracts node and element data from a MSH file into our `Mesh` struct.
+fn extract_mesh_data_from_file(file_path: &str) -> Result<Mesh, EngineError> {
+    let msh_bytes = fs::read(file_path).map_err(|e| EngineError::MeshingFailed(e.to_string()))?;
+    let msh = mshio::parse_msh_bytes(&msh_bytes).map_err(|e| EngineError::MeshingFailed(e.to_string()))?;
+
+    let nodes = msh.data.nodes.unwrap().node_blocks.iter().flat_map(|b| b.nodes.iter()).map(|n| [n.x, n.y, n.z]).collect();
+
+    let mut elements = Vec::new();
+    let mut element_type = "Unknown".to_string();
+
+    if let Some(element_block) = msh.data.elements.unwrap().element_blocks.iter().find(|e| e.element_type == mshio::ElementType::Tet4) {
+        element_type = "Tetrahedron".to_string();
+        elements = element_block.elements.iter().map(|e| e.nodes.iter().map(|n| *n as usize).collect()).collect();
+    }
+
+    Ok(Mesh {
+        nodes,
+        elements,
+        element_type,
+        boundary_regions: std::collections::HashMap::new(),
+    })
+}
+
+impl From<i32> for EngineError {
+    fn from(err: i32) -> Self {
+        EngineError::MeshingFailed(format!("Gmsh error code: {}", err))
+    }
+}

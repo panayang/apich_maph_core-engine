@@ -1,0 +1,16 @@
+{ "onelab":{
+  "creator":"Gmsh",
+  "date":"Sat Jul 19 16:20:09 2025",
+  "version":"1.3",
+  "parameters":[
+    { "type":"string", "name":"GetDP/Action", "changedValue":0, "visible":false, "readOnly":false, "values":[ "stop" ] , "kind":"generic" },
+    { "type":"string", "name":"Gmsh/Action", "changedValue":0, "visible":false, "readOnly":false, "clients":{ "Gmsh":0 }, "values":[ "stop" ] , "kind":"generic" },
+    { "type":"string", "name":"Gmsh/Model absolute path", "changedValue":0, "visible":false, "readOnly":true, "clients":{ "Gmsh":0 }, "values":[ "" ] , "kind":"generic" },
+    { "type":"string", "name":"Gmsh/Model name", "changedValue":0, "visible":false, "readOnly":true, "clients":{ "Gmsh":0 }, "values":[ "untitled.geo" ] , "kind":"file" },
+    { "type":"string", "name":"Gmsh/MshFileName", "label":"Mesh name", "changedValue":31, "visible":true, "readOnly":false, "attributes":{ "Closed":"1" }, "clients":{ "Gmsh":0 }, "values":[ "untitled.msh" ] , "kind":"file" },
+    { "type":"string", "name":"Gmsh/}Input files", "changedValue":31, "visible":false, "readOnly":true, "attributes":{ "AutoCheck":"0" }, "clients":{ "Gmsh":0 }, "values":[ "/home/pana/.gmshrc" ] , "kind":"file", "choices":[ "/home/pana/.gmshrc" ] },
+    { "type":"string", "name":"GmshRemote/Action", "changedValue":0, "visible":false, "readOnly":false, "values":[ "stop" ] , "kind":"generic" },
+    { "type":"string", "name":"ONELAB/Action", "changedValue":0, "visible":false, "readOnly":false, "attributes":{ "Persistent":"1" }, "values":[ "stop" ] , "kind":"generic" },
+    { "type":"string", "name":"ONELAB/Button", "changedValue":3, "visible":false, "readOnly":false, "attributes":{ "Persistent":"1" }, "clients":{ "Gmsh":0 }, "values":[ "" ] , "kind":"generic" }
+  ] }
+}
