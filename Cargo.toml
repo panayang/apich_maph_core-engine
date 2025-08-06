@@ -9,7 +9,7 @@ description = "The core simulation engine for the next-generation open-source pl
 [dependencies]
 gmsh-sys = "0.1.2"
 mshio = "0.4.2"
-pyo3 = { version = "0.21.2", features = ["auto-initialize"] }
+pyo3 = { version = "0.25.1", features = ["auto-initialize"] }
 wasmer = "4.2.4"
 docker-api = "0.14.0"
 futures-util = "0.3.31"
